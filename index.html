@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>First Words</title>
+<meta name="description" content="A voice-dictation onboarding prototype that tests a guided first dictation against a standard setup.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one centred card per step, a slim progress rail on top, a waveform as the only flourish. */
+:root{
+  --bg:#f3f6f6; --surface:#ffffff; --ink:#122224; --muted:#5b6d6f; --line:#d9e2e2;
+  --accent:#0d7a6c; --accent-ink:#ffffff; --accent-soft:#dff1ee; --warn:#b4541a; --good:#1f7a3a;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d1617; --surface:#142224; --ink:#e6efee; --muted:#93a7a6; --line:#25393b;
+  --accent:#3cc2ad; --accent-ink:#06201c; --accent-soft:#163a35; --warn:#f0965c; --good:#5fd08a; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;align-items:center}
+.wrap{width:100%;max-width:560px;padding-block:28px 40px;display:flex;flex-direction:column;gap:18px;flex:1}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font:700 1.05rem var(--display);letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.variant-tag{font:500 .72rem var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.rail{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.rail i{display:block;height:100%;width:0;background:var(--accent);transition:width .35s ease}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 24px;display:flex;flex-direction:column;gap:16px}
+h1,h2{font-family:var(--display);font-weight:700;line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:clamp(1.7rem,5vw,2.2rem)} h2{font-size:1.4rem}
+p{margin:0;color:var(--muted)} p.lead{color:var(--ink)}
+.btn{appearance:none;border:0;border-radius:10px;padding:13px 18px;font:600 1rem var(--body);cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,.mic:focus-visible,.chip:focus-visible,textarea:focus-visible,.score button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.say{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:10px;padding:14px 16px;font:500 1.08rem var(--body);color:var(--ink)}
+.say small{display:block;font:500 .72rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.micbox{display:flex;flex-direction:column;align-items:center;gap:12px;padding:6px 0}
+.mic{width:84px;height:84px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;display:grid;place-items:center;transition:transform .15s}
+.mic svg{width:34px;height:34px}
+.mic.live{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent)}50%{box-shadow:0 0 0 16px color-mix(in srgb,var(--accent) 0%,transparent)}}
+.wave{display:flex;gap:4px;align-items:center;height:28px}
+.wave b{width:4px;border-radius:2px;background:var(--accent);height:6px;transition:height .12s}
+.hint{font:.82rem var(--mono);color:var(--muted);text-align:center}
+.out{min-height:96px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:1.02rem;white-space:pre-wrap;color:var(--ink);background:var(--bg)}
+.out:empty::before{content:attr(data-empty);color:var(--muted)}
+textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:500 1.45rem var(--mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:.78rem;color:var(--muted)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:8px 14px;font:500 .9rem var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.score{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.score button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:12px 0;font:500 1.05rem var(--mono);cursor:pointer}
+.score button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.scale{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+.note{font-size:.85rem;color:var(--warn)}
+.ok{color:var(--good);font-weight:600}
+footer{font-size:.78rem;color:var(--muted);text-align:center;max-width:560px}
+.debug{width:100%;max-width:560px;font:.75rem/1.5 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;white-space:pre}
+@media (max-width:420px){.stats{grid-template-columns:1fr}.card{padding:22px 18px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>First Words</div>
+    <div class="variant-tag" id="vtag"></div>
+  </div>
+  <div class="rail" aria-hidden="true"><i id="rail"></i></div>
+  <main id="app" class="card" aria-live="polite"></main>
+</div>
+<footer>A voice onboarding prototype by Bhanavi D. An independent concept, not affiliated with any company.</footer>
+<pre class="debug" id="debug" hidden></pre>
+
+<script>
+/* ================= CONFIG =================
+   Paste your PostHog project key to send events to PostHog (free tier).
+   Leave empty to keep events only in this browser (visible with ?debug=1). */
+const POSTHOG_KEY = "";
+const POSTHOG_HOST = "https://us.i.posthog.com";
+const SPEECH_LANG = "en-IN";
+const SUCCESS_MIN_WORDS = 4;           // a "successful first dictation"
+const TYPING_WPM_BASELINE = 40;        // average typing speed used for comparison
+/* ========================================== */
+
+const params = new URLSearchParams(location.search);
+const store = {
+  get(k){ try{return localStorage.getItem(k)}catch(e){return null} },
+  set(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
+};
+
+// ---------- Variant assignment (sticky per browser, overridable with ?v=a or ?v=b) ----------
+let variant = (params.get("v")||"").toLowerCase();
+if(!["a","b"].includes(variant)){
+  variant = store.get("fw_variant") || (Math.random() < 0.5 ? "a" : "b");
+}
+store.set("fw_variant", variant);
+let tester = store.get("fw_tester");
+if(!tester){ tester = "t_" + Math.random().toString(36).slice(2,10); store.set("fw_tester", tester); }
+if(params.get("debug")==="1") document.getElementById("vtag").textContent = "Variant " + variant.toUpperCase();
+
+// ---------- Analytics ----------
+const t0 = performance.now();
+const log = [];
+let posthog = null;
+if(POSTHOG_KEY){
+  const s = document.createElement("script");
+  s.src = POSTHOG_HOST.replace("i.posthog.com","assets.i.posthog.com") + "/static/array.js";
+  s.async = true;
+  s.onload = () => {
+    if(window.posthog){
+      window.posthog.init(POSTHOG_KEY,{api_host:POSTHOG_HOST,autocapture:false,capture_pageview:false,persistence:"localStorage"});
+      window.posthog.identify(tester);
+      window.posthog.register({variant, experiment:"first_dictation_onboarding"});
+      posthog = window.posthog;
+      log.forEach(e => posthog.capture(e.event, e.props));
+    }
+  };
+  document.head.appendChild(s);
+}
+function track(event, props={}){
+  const e = {event, props:{...props, variant, tester, ms_since_start:Math.round(performance.now()-t0)}};
+  log.push(e);
+  try{ const all = JSON.parse(store.get("fw_log")||"[]"); all.push({...e, at:new Date().toISOString()}); store.set("fw_log", JSON.stringify(all.slice(-500))); }catch(err){}
+  if(posthog) posthog.capture(event, e.props);
+  renderDebug();
+}
+const debugEl = document.getElementById("debug");
+if(params.get("debug")==="1") debugEl.hidden = false;
+function renderDebug(){ if(!debugEl.hidden) debugEl.textContent = log.map(e=>`${String(e.props.ms_since_start).padStart(6)}ms  ${e.event}  ${JSON.stringify(Object.fromEntries(Object.entries(e.props).filter(([k])=>!["variant","tester","ms_since_start"].includes(k))))}`).join("\n"); }
+
+// ---------- Speech ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const speechSupported = !!SR;
+const wordCount = s => (s.trim().match(/\S+/g)||[]).length;
+
+function makeDictation({outEl, micEl, hintEl, waveEl, onFinal}){
+  let rec=null, live=false, startedAt=0, finalText="", waveTimer=null;
+  const bars = waveEl ? [...waveEl.children] : [];
+  function animate(on){
+    clearInterval(waveTimer);
+    if(on) waveTimer = setInterval(()=>bars.forEach(b=>b.style.height=(6+Math.random()*22)+"px"),120);
+    else bars.forEach(b=>b.style.height="6px");
+  }
+  function stop(){ if(rec && live){ rec.stop(); } }
+  function start(){
+    if(!speechSupported) return;
+    rec = new SR(); rec.lang = SPEECH_LANG; rec.interimResults = true; rec.continuous = true;
+    finalText = ""; outEl.textContent = "";
+    rec.onstart = () => { live=true; startedAt=performance.now(); micEl.classList.add("live"); micEl.setAttribute("aria-label","Stop dictating"); hintEl.textContent="Listening… tap again when you're done"; animate(true); track("dictation_started"); };
+    rec.onresult = ev => {
+      let interim=""; finalText="";
+      for(const r of ev.results){ if(r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
+      outEl.textContent = (finalText + interim).trim();
+    };
+    rec.onerror = ev => {
+      track("dictation_error",{error:ev.error});
+      if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){ track("mic_permission_denied"); hintEl.innerHTML = '<span class="note">Microphone access was blocked. Allow it in your browser’s address bar, then tap the mic again.</span>'; }
+      else if(ev.error==="no-speech"){ hintEl.textContent = "I didn't hear anything. Tap the mic and try again."; }
+    };
+    rec.onend = () => {
+      live=false; micEl.classList.remove("live"); micEl.setAttribute("aria-label","Start dictating"); animate(false);
+      const text = outEl.textContent.trim(); const secs = (performance.now()-startedAt)/1000;
+      if(text){ onFinal(text, secs); } else if(!hintEl.querySelector(".note")) hintEl.textContent = "Tap the mic and speak.";
+    };
+    try{ rec.start(); }catch(err){ track("dictation_error",{error:String(err)}); }
+  }
+  micEl.addEventListener("click", ()=> live ? stop() : start());
+  return {stop};
+}
+
+// ---------- UI helpers ----------
+const app = document.getElementById("app");
+const rail = document.getElementById("rail");
+const micSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+const waveHTML = '<div class="wave" aria-hidden="true">'+'<b></b>'.repeat(14)+'</div>';
+function view(html, progress){ app.innerHTML = html; rail.style.width = progress + "%"; const h = app.querySelector("h1,h2"); if(h){ h.tabIndex=-1; h.focus({preventScroll:true}); } }
+const $ = s => app.querySelector(s);
+
+// Fallback when the browser has no speech recognition: type instead, and record that.
+function dictationBlock(placeholder){
+  if(speechSupported) return `<div class="micbox"><button class="mic" id="mic" aria-label="Start dictating">${micSVG}</button>${waveHTML}<div class="hint" id="hint">Tap the mic and speak.</div></div><div class="out" id="out" data-empty="${placeholder}"></div>`;
+  return `<p class="note">This browser doesn't support speech recognition. Open the link in Chrome or Edge to try voice. For now, type what you would have said.</p><textarea id="typed" placeholder="${placeholder}"></textarea><button class="btn ghost" id="typedDone">Done</button>`;
+}
+function wireDictation(placeholder, onFinal){
+  if(speechSupported){
+    return makeDictation({outEl:$("#out"), micEl:$("#mic"), hintEl:$("#hint"), waveEl:app.querySelector(".wave"), onFinal});
+  }
+  const t0b = performance.now();
+  $("#typedDone").addEventListener("click", ()=>{ const v=$("#typed").value.trim(); if(v) onFinal(v,(performance.now()-t0b)/1000, true); });
+  return {stop(){}};
+}
+
+// ================= VARIANT A: standard setup =================
+function A_welcome(){
+  view(`<h1>Write with your voice in any app.</h1>
+    <p class="lead">Speak naturally and your words appear as text, wherever your cursor is.</p>
+    <p>Setup takes about a minute.</p>
+    <div class="row"><button class="btn" id="go">Get started</button></div>`, 10);
+  $("#go").onclick = ()=>{ track("onboarding_started"); A_permissions(); };
+}
+function A_permissions(){
+  view(`<h2>Allow microphone access</h2>
+    <p class="lead">We need your microphone to hear what you say. Audio is only used to turn your speech into text.</p>
+    <p>Your browser will ask for permission when you first tap the mic.</p>
+    <div class="row"><button class="btn" id="next">Continue</button></div>`, 30);
+  $("#next").onclick = ()=>{ track("permissions_step_completed"); A_howto(); };
+}
+function A_howto(){
+  view(`<h2>How it works</h2>
+    <p class="lead">Tap the mic to start, speak, then tap again to stop. Your text appears where you were typing.</p>
+    <p>Tip: speak in full sentences. Punctuation is added for you.</p>
+    <div class="row"><button class="btn" id="next">Try it</button></div>`, 50);
+  $("#next").onclick = ()=>{ track("howto_step_completed"); A_try(); };
+}
+function A_try(){
+  view(`<h2>Try dictating</h2><p>Say anything you like.</p>${dictationBlock("Your words will appear here")}
+    <div class="row"><button class="btn" id="finish" disabled>Finish setup</button><button class="btn ghost" id="skip">Skip for now</button></div>`, 70);
+  let succeeded=false;
+  wireDictation("Your words will appear here", (text, secs, typed)=>{
+    const w = wordCount(text);
+    track("dictation_completed",{words:w, seconds:+secs.toFixed(1), typed_fallback:!!typed, step:"free_try"});
+    if(w >= SUCCESS_MIN_WORDS && !succeeded){ succeeded=true; track("first_dictation_success",{words:w, time_to_success_ms:Math.round(performance.now()-t0), typed_fallback:!!typed}); $("#finish").disabled=false; }
+  });
+  $("#finish").onclick = ()=>{ track("onboarding_completed"); survey(); };
+  $("#skip").onclick = ()=>{ track("onboarding_skipped",{at:"free_try"}); survey(); };
+}
+
+// ================= VARIANT B: guided first win =================
+const PROMPT = "Remind me to send the project update to Priya by Friday, and ask if she needs the slides.";
+function B_welcome(){
+  view(`<h1>Say one sentence. See what happens.</h1>
+    <p class="lead">No setup first. Tap the mic and read the line below out loud.</p>
+    <div class="row"><button class="btn" id="go">I'm ready</button></div>`, 15);
+  $("#go").onclick = ()=>{ track("onboarding_started"); B_firstWin(); };
+}
+function B_firstWin(){
+  view(`<h2>Read this out loud</h2>
+    <div class="say"><small>Say this</small>“${PROMPT}”</div>
+    ${dictationBlock("Your words will appear here as you speak")}
+    <div class="row"><button class="btn ghost" id="skip">Skip</button></div>`, 40);
+  let done=false;
+  wireDictation("Your words will appear here as you speak", (text, secs, typed)=>{
+    const w = wordCount(text);
+    track("dictation_completed",{words:w, seconds:+secs.toFixed(1), typed_fallback:!!typed, step:"guided_prompt"});
+    if(w >= SUCCESS_MIN_WORDS && !done){ done=true;
+      track("first_dictation_success",{words:w, time_to_success_ms:Math.round(performance.now()-t0), typed_fallback:!!typed});
+      B_aha(w, secs, typed);
+    }
+  });
+  $("#skip").onclick = ()=>{ track("onboarding_skipped",{at:"guided_prompt"}); survey(); };
+}
+function B_aha(words, secs, typed){
+  const wpm = Math.round(words / Math.max(secs,1) * 60);
+  const typingSecs = words / TYPING_WPM_BASELINE * 60;
+  const saved = Math.max(0, typingSecs - secs);
+  view(`<h2><span class="ok">Done.</span> That was ${words} words.</h2>
+    <div class="stats">
+      <div class="stat"><b>${secs.toFixed(1)}s</b><span>to say it</span></div>
+      <div class="stat"><b>${typingSecs.toFixed(0)}s</b><span>to type it at ${TYPING_WPM_BASELINE} wpm</span></div>
+      <div class="stat"><b>${wpm}</b><span>words per minute, spoken</span></div>
+    </div>
+    <p class="lead">${saved > 1 ? `You saved about ${saved.toFixed(0)} seconds on one sentence.` : "Speaking keeps pace with your thoughts."} Now try something you'd actually write today.</p>
+    ${typed ? '<p class="note">You typed this one, so these numbers are only illustrative.</p>' : ""}
+    <div class="row"><button class="btn" id="next">Try something real</button></div>`, 60);
+  track("aha_screen_viewed",{wpm, seconds_saved:+saved.toFixed(1)});
+  $("#next").onclick = B_real;
+}
+function B_real(){
+  const ideas = ["A Slack reply","An email to a professor","A note to self","A WhatsApp message"];
+  view(`<h2>Now say something real</h2>
+    <p>Pick what you'd write next, then just talk.</p>
+    <div class="chips" role="group" aria-label="What are you writing?">${ideas.map(i=>`<button class="chip" aria-pressed="false">${i}</button>`).join("")}</div>
+    ${dictationBlock("Say your message")}
+    <div class="row"><button class="btn" id="next" disabled>Continue</button><button class="btn ghost" id="skip">Skip</button></div>`, 75);
+  let ctx="";
+  app.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ app.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false")); c.setAttribute("aria-pressed","true"); ctx=c.textContent; track("real_use_context_selected",{context:ctx}); });
+  wireDictation("Say your message",(text,secs,typed)=>{
+    const w=wordCount(text);
+    track("dictation_completed",{words:w, seconds:+secs.toFixed(1), typed_fallback:!!typed, step:"real_use", context:ctx||"none"});
+    if(w >= SUCCESS_MIN_WORDS){ track("second_dictation_success",{words:w, context:ctx||"none"}); $("#next").disabled=false; }
+  });
+  $("#next").onclick = B_habit;
+  $("#skip").onclick = ()=>{ track("real_use_skipped"); B_habit(); };
+}
+function B_habit(){
+  const slots = ["Morning, when I plan my day","After lunch","Evening, when I clear messages","No reminder"];
+  view(`<h2>Make it stick</h2>
+    <p class="lead">People who dictate on their second day are far more likely to keep going. When should we nudge you to try it again tomorrow?</p>
+    <div class="chips" role="group" aria-label="Reminder time">${slots.map(s=>`<button class="chip" aria-pressed="false">${s}</button>`).join("")}</div>
+    <div class="row"><button class="btn" id="next" disabled>Finish</button></div>`, 90);
+  let pick="";
+  app.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ app.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false")); c.setAttribute("aria-pressed","true"); pick=c.textContent; $("#next").disabled=false; });
+  $("#next").onclick = ()=>{ track("habit_nudge_choice",{choice:pick, opted_in: pick!=="No reminder"}); track("onboarding_completed"); survey(); };
+}
+
+// ================= Shared: one-question survey =================
+function survey(){
+  view(`<h2>One quick question</h2>
+    <p class="lead">How likely are you to use voice typing again tomorrow?</p>
+    <div class="score" role="group" aria-label="Likelihood from 1 to 5">${[1,2,3,4,5].map(n=>`<button aria-pressed="false" data-n="${n}">${n}</button>`).join("")}</div>
+    <div class="scale"><span>Not likely</span><span>Very likely</span></div>
+    <label for="why">What, if anything, nearly made you give up? <span style="color:var(--muted)">(optional)</span></label>
+    <textarea id="why" placeholder="Anything confusing, slow or surprising"></textarea>
+    <div class="row"><button class="btn" id="send" disabled>Send</button></div>`, 100);
+  let n=0;
+  app.querySelectorAll(".score button").forEach(b=>b.onclick=()=>{ app.querySelectorAll(".score button").forEach(x=>x.setAttribute("aria-pressed","false")); b.setAttribute("aria-pressed","true"); n=+b.dataset.n; $("#send").disabled=false; });
+  $("#send").onclick = ()=>{ track("survey_submitted",{likelihood:n, comment:$("#why").value.trim().slice(0,500)}); thanks(); };
+}
+function thanks(){
+  view(`<h2>Thank you!</h2>
+    <p class="lead">Your answers help test which first-time experience gets people to a working dictation faster.</p>
+    ${params.get("debug")==="1" ? `<p>Debug: <a href="?v=${variant==="a"?"b":"a"}&debug=1" style="color:var(--accent)">open variant ${variant==="a"?"B":"A"}</a></p>` : ""}`, 100);
+}
+
+if(!speechSupported) track("speech_unsupported",{ua:navigator.userAgent.slice(0,120)});
+track("page_viewed",{speech_supported:speechSupported});
+(variant==="a" ? A_welcome : B_welcome)();
+</script>
+</body>
+</html>
